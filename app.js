@@ -3,8 +3,7 @@ require('dotenv').config()
 const restify = require('restify');
 const builder = require('botbuilder');
 
-const dictionary = require('dictionary-en-us');
-const nspell = require('nspell');
+const spelling = require('./spelling');
 
 // Setup Restify Server
 var server = restify.createServer();
@@ -32,40 +31,7 @@ var spellRecognizer = new builder.RegExpRecognizer('Spell', /^(sp|spell|spelling
 var intent = new builder.IntentDialog({ recognizers: [ spellRecognizer ], recognizeOrder: 'series' });
 
 intent.matches('Spell', (session, args) => {
-  suggestSpelling(session, args);
+  spelling.suggest(session, args);
 });
 
 bot.dialog('/', intent).onDefault(session => session.send("Sorry, but I don't understand what you're asking."));
-
-function suggestSpelling(session, args) {
-  dictionary((err, dict) => {
-    if (err) {
-      session.send("Oops! Something went wrong: %s", err.message);
-    }
-
-    var word = args.matched[2];
-
-    var spell = nspell(dict);
-    var suggestions = spell.suggest(word);
-    // var correct = spell.correct(word); // boolean
-
-    var title = word;
-    var subtitle;
-    var text = suggestions.join(', ');
-
-    if (suggestions.length === 0) {
-      subtitle = 'Correct!';
-    } else if (suggestions.length === 1) {
-      subtitle = "Is this what you're looking for?";
-    } else {
-      subtitle = "Perhaps you're looking for one of these?";
-    }
-
-    var card = new builder.ThumbnailCard(session)
-      .title(title)
-      .subtitle(subtitle)
-      .text(text);
-
-    session.send(new builder.Message(session).addAttachment(card));
-  });
-}
