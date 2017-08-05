@@ -49,12 +49,23 @@ function suggestSpelling(session, args) {
     var suggestions = spell.suggest(word);
     // var correct = spell.correct(word); // boolean
 
+    var title = word;
+    var subtitle;
+    var text = suggestions.join(', ');
+
     if (suggestions.length === 0) {
-      session.send("Good job! '%s' is the correct spelling.", word);
+      subtitle = 'Correct!';
     } else if (suggestions.length === 1) {
-      session.send("Did you mean '%s'?", suggestions[0]);
+      subtitle = "Is this what you're looking for?";
     } else {
-      session.send("Perhaps you're looking for one of these? %s", suggestions.join(', '));
+      subtitle = "Perhaps you're looking for one of these?";
     }
+
+    var card = new builder.ThumbnailCard(session)
+      .title(title)
+      .subtitle(subtitle)
+      .text(text);
+
+    session.send(new builder.Message(session).addAttachment(card));
   });
 }
