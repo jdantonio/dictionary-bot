@@ -22,23 +22,39 @@ var connector = new builder.ChatConnector({
 server.post('/api/messages', connector.listen());
 
 // Receive messages from the user and respond by echoing each message back (prefixed with 'You said:')
-var bot = new builder.UniversalBot(connector, function (session) {
+// var bot = new builder.UniversalBot(connector, function (session) {
+//   session.send("You said: %s", session.message.text);
+// });
 
+var bot = new builder.UniversalBot(connector);
+
+var spellRecognizer = new builder.RegExpRecognizer('Spell', /^(sp|spell|spelling)\s(.*)/i);
+var intent = new builder.IntentDialog({ recognizers: [ spellRecognizer ], recognizeOrder: 'series' });
+
+intent.matches('Spell', (session, args) => {
+  suggestSpelling(session, args);
+});
+
+bot.dialog('/', intent).onDefault(session => session.send("Sorry, but I don't understand what you're asking."));
+
+function suggestSpelling(session, args) {
   dictionary((err, dict) => {
     if (err) {
-      session.send("Error: %s", err.message);
+      session.send("Oops! Something went wrong: %s", err.message);
     }
+
+    var word = args.matched[2];
 
     var spell = nspell(dict);
-    var suggestions = spell.suggest(session.message.text);
-    // var correct = spell.correct(session.message.text); // boolean
+    var suggestions = spell.suggest(word);
+    // var correct = spell.correct(word); // boolean
 
     if (suggestions.length === 0) {
-      session.send("Correct: %s", session.message.text);
+      session.send("Good job! '%s' is the correct spelling.", word);
+    } else if (suggestions.length === 1) {
+      session.send("Did you mean '%s'?", suggestions[0]);
     } else {
-      session.send("Suggestions: %s", suggestions.join(', '));
+      session.send("Perhaps you're looking for one of these? %s", suggestions.join(', '));
     }
   });
-
-  // session.send("You said: %s", session.message.text);
-});
+}
