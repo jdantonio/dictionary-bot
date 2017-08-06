@@ -1,42 +1,54 @@
 const builder = require('botbuilder');
-const parseString = require('xml2js').parseString;
 const http = require('http');
+const DOMParser = require('xmldom').DOMParser;
 
 const MW_SOUND_BASE = 'http://media.merriam-webster.com/soundc11';
+
+const BULLET = '\u2022';
 
 function findDefintion(session, args) {
     var word = args.matched[2];
 
     getDefinition(word).then((data) => {
-      // console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
-      // console.log(JSON.stringify(data));
-      // console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+      console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+      console.log(data);
+      console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
 
+      session.send(data);
+
+      var doc = new DOMParser().parseFromString(data);
+      var entry = doc.getElementsByTagName('entry');
+      var suggestion = doc.getElementsByTagName('suggestion');
+
+      // console.log('=========>', entry);
+      console.log('=========>', entry.length);
+      // console.log('=========>', suggestion);
+      console.log('=========>', suggestion.length);
+
+      // var entry = getEntry(data);
       // short-circuit if the word isn't found
-      if (!data.entry_list.hasOwnProperty('entry')) {
+      if (entry.length === 0 && suggestion.length === 0) {
         session.send(`Interesting. I couldn't find a definition for '${word}'`);
         return;
       }
 
-      var entry = data.entry_list.entry[0];
+      // var title = entry.ew;
+      // var subtitle = `${entry.fl[0]} | ${entry.hw[0].replace(/\*/g, BULLET)} | \\${entry.pr[0]}\\`;
+      // var text = 'definition';
 
-      var title = entry.ew;
-      var subtitle = `${entry.fl[0]} | ${entry.hw[0]} | \\${entry.pr[0]}\\`;
-      var text = 'definition';
+      // var card = new builder.ThumbnailCard(session)
+      //   .title(title)
+      //   .subtitle(subtitle)
+      //   .text(text)
+      //   .images([
+      //     new builder.CardImage(session)
+      //       .url('https://www.dictionaryapi.com/images/info/branding-guidelines/mw-logo-light-background-50x50.png')
+      //       .alt('Merriam-Webster Inc.'),
+      //     new builder.CardImage(session)
+      //       .url(soundToImage(data))
+      //   ]);
 
-      var card = new builder.ThumbnailCard(session)
-        .title(title)
-        .subtitle(subtitle)
-        .text(text)
-        .images([
-          new builder.CardImage(session)
-            .url('https://www.dictionaryapi.com/images/info/branding-guidelines/mw-logo-light-background-50x50.png')
-            .alt('Merriam-Webster Inc.'),
-          new builder.CardImage(session)
-            .url(soundToImage(data))
-        ]);
-
-      session.send(new builder.Message(session).addAttachment(card));
+      // session.send(new builder.Message(session).addAttachment(card));
     }).catch((err) => {
       session.send("Oops! Something went wrong: %s", err.message);
     });
@@ -64,15 +76,11 @@ function getDefinition(word) {
 
       response.on('end', () => {
         if (response.statusCode === 200) {
-          parseString(data, function (err, result) {
-            if (err) {
-              reject(err);
-            } else {
-              resolve(result);
-            }
-          });
-        } else {
-          reject(new Error(response.statusMessage));
+          try {
+            resolve(data);
+          } catch (e) {
+            reject(e);
+          }
         }
       });
     }
@@ -81,6 +89,15 @@ function getDefinition(word) {
       reject(err);
     }).end();
   });
+}
+
+function getEntry(data) {
+  if (data.hasOwnProperty('entry_list')
+    && data.entry_list.hasOwnProperty('entry')
+    && Array.isArray(data.entry_list.entry)
+    && data.entry_list.entry.length > 0) {
+    return data.entry_list.entry[0];
+  }
 }
 
 function soundToImage(data) {
@@ -98,6 +115,30 @@ module.exports.find = findDefintion;
 
 /*
 {"entry_list":{"$":{"version":"1.0"}}}
+
+<?xml version="1.0" encoding="utf-8" ?>
+<entry_list version="1.0">
+	<suggestion>Lakes</suggestion>
+	<suggestion>Leeds</suggestion>
+	<suggestion>LDS</suggestion>
+	<suggestion>lakeside</suggestion>
+	<suggestion>Likasi</suggestion>
+	<suggestion>lady's</suggestion>
+	<suggestion>Lajas</suggestion>
+	<suggestion>look-see</suggestion>
+	<suggestion>latest</suggestion>
+	<suggestion>legist</suggestion>
+	<suggestion>locust</suggestion>
+	<suggestion>ladies'</suggestion>
+	<suggestion>ladies</suggestion>
+	<suggestion>Lhotse</suggestion>
+	<suggestion>Lacus</suggestion>
+	<suggestion>Lagos</suggestion>
+	<suggestion>latus</suggestion>
+	<suggestion>leges</suggestion>
+	<suggestion>legis</suggestion>
+	<suggestion>litas</suggestion>
+</entry_list>
 
 {
    "entry_list": {
