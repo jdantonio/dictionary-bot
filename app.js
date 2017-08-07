@@ -3,8 +3,8 @@ require('dotenv').config()
 const restify = require('restify');
 const builder = require('botbuilder');
 
-const spelling = require('./spelling');
-const definition = require('./definition');
+const spelling = require('./src/spelling');
+const definition = require('./src/definition');
 
 /* eslint no-console: "off" */
 
@@ -32,7 +32,13 @@ var defineRecognizer = new builder.RegExpRecognizer('Define', /^(define)\s(.*)/i
 var intent = new builder.IntentDialog({ recognizers: [ spellRecognizer, defineRecognizer ] });
 
 intent.matches('Spell', (session, args) => {
-  spelling.suggest(session, args);
+  var result = spelling.getSuggestions(args.matched[2]).then((result) => {
+    if (result instanceof Error) {
+      session.send(formatError(result));
+    } else {
+      session.send(spelling.decorate(session, result));
+    }
+  });
 });
 
 intent.matches('Define', (session, args) => {
@@ -40,3 +46,7 @@ intent.matches('Define', (session, args) => {
 });
 
 bot.dialog('/', intent).onDefault(session => session.send("Sorry, but I don't understand what you're asking."));
+
+function formatError(err) {
+  return `Oops! Something went wrong: ${err.message}`;
+}
