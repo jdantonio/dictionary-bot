@@ -42,7 +42,7 @@ intent.matches('Spell', (session, args) => {
 });
 
 intent.matches('Define', (session, args) => {
-  definition.find(session, args);
+  definition.getDefinition(session, args);
 });
 
 bot.dialog('/', intent).onDefault(session => session.send("Sorry, but I don't understand what you're asking."));

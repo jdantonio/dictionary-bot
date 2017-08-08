@@ -4,15 +4,16 @@ const DOMParser = require('xmldom').DOMParser;
 
 const MW_SOUND_BASE = 'http://media.merriam-webster.com/soundc11';
 
-const BULLET = '\u2022';
+function decorate(session, result) {
+}
 
-function findDefintion(session, args) {
+function getDefinition(session, args) {
     var word = args.matched[2];
 
-    getDefinition(word).then((data) => {
-      console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
-      console.log(data);
-      console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+    lookupWord(word).then((data) => {
+      // console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+      // console.log(data);
+      // console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
 
       session.send(data);
 
@@ -54,7 +55,7 @@ function findDefintion(session, args) {
     });
 }
 
-function getDefinition(word) {
+function lookupWord(word) {
 
   var options = {
     hostname: 'www.dictionaryapi.com',
@@ -91,29 +92,105 @@ function getDefinition(word) {
   });
 }
 
-function getEntry(data) {
-  if (data.hasOwnProperty('entry_list')
-    && data.entry_list.hasOwnProperty('entry')
-    && Array.isArray(data.entry_list.entry)
-    && data.entry_list.entry.length > 0) {
-    return data.entry_list.entry[0];
+function parseXml(xml) {
+  var doc = new DOMParser().parseFromString(xml);
+  var entries = doc.getElementsByTagName('entry');
+  var suggestions = doc.getElementsByTagName('suggestion');
+
+  var result = {
+    entry: null,
+    suggestions: []
+  }
+
+  result.hasEntry = entries.length > 0;
+  result.hasSuggestions = suggestions.length;
+  result.isEmpty = !(result.hasEntry || result.hasSuggestions);
+
+  for (var i = 0; i < suggestions.length; i++) {
+    result.suggestions.push(suggestions.item(i).textContent);
+  }
+
+  if (entries.length > 0) {
+    var entry = entries[0];
+    result.entry = {
+      id: entry.getAttribute('id'),
+      hw: textFromEntry('hw', entry).replace(/\*/g, '\u2022'),
+      pr: textFromEntry('pr', entry),
+      fl: textFromEntry('fl', entry),
+      sound: soundToLink(entry),
+      definitions: []
+    };
+
+    var definitions = entry.getElementsByTagName('def');
+
+    if (definitions.length > 0) {
+      var definition = definitions.item(0);
+      result.entry.date = textFromEntry('date', definition);
+
+      var dts = definition.getElementsByTagName('dt');
+      for (var i = 0; i < dts.length; i++) {
+        var dt = dts.item(i);
+        result.entry.definitions.push(
+          dt.textContent.replace(/\s+/g, ' ').trim().replace(/^:/, '')
+        );
+      }
+    }
+  }
+
+  return result;
+}
+
+function textFromEntry(name, entry) {
+  var result;
+  var elements = entry.getElementsByTagName(name);
+
+  if (elements.length > 0) {
+    result = elements.item(0).textContent;
+  }
+
+  return result;
+}
+
+function soundToLink(entry) {
+  // http://media.merriam-webster.com/soundc11/h/heart001.wav
+  var file = textFromEntry('wav', entry);
+  if (file) {
+    return `${MW_SOUND_BASE}/${file.charAt(0)}/${file}`; 
   }
 }
 
-function soundToImage(data) {
-  // http://media.merriam-webster.com/soundc11/h/heart001.wav
-
-  var sounds = data.entry_list.entry[0].sound;
-  if (sounds.length > 0) {
-    var file = sounds[0];
-    var sound = sounds[0].wav[0];
-    return `${MW_SOUND_BASE}/${sound.charAt(0)}/${sounds}`; 
-  } 
+module.exports = {
+  getDefinition
 }
 
-module.exports.find = findDefintion;
-
 /*
+entry_list
+{
+  isEmpty: true,
+  hasSuggestions: false,
+  hasEntry: false,
+  suggestions: [],
+  entry: {}
+}
+
+entry
+{
+  id: '',
+  hw: '',
+  sound: '',
+  pr: '',
+  fl: '',
+  definitions: []
+}
+
+definition
+{
+  priority: 0,
+  date: '',
+  dt: ''
+}
+
+
 //define 'ljskdhklfhaklfkfd'
 
 <?xml version="1.0" encoding="utf-8" ?>
@@ -280,5 +357,4 @@ module.exports.find = findDefintion;
       </def>
    </entry>
 </entry_list>
-
 */
