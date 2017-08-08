@@ -33,16 +33,18 @@ var intent = new builder.IntentDialog({ recognizers: [ spellRecognizer, defineRe
 
 intent.matches('Spell', (session, args) => {
   var result = spelling.getSuggestions(args.matched[2]).then((result) => {
-    if (result instanceof Error) {
-      session.send(formatError(result));
-    } else {
-      session.send(spelling.decorate(session, result));
-    }
+    session.send(spelling.decorate(session, result));
+  }).catch((err) => {
+    session.send(formatError(err));
   });
 });
 
 intent.matches('Define', (session, args) => {
-  definition.getDefinition(session, args);
+  var result = definition.getDefinition(args.matched[2]).then((result) => {
+    session.send(definition.decorate(session, result));
+  }).catch((err) => {
+    session.send(formatError(err));
+  });
 });
 
 bot.dialog('/', intent).onDefault(session => session.send("Sorry, but I don't understand what you're asking."));

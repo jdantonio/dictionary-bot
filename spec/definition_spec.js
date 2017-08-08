@@ -6,12 +6,15 @@ describe('parseXml', () => {
   var parseXml = definition.__get__('parseXml');
 
   it('parses an empty entry_list', () => {
+    var word = 'ljskdhklfhaklfkfd';
     var xml = `
 <?xml version="1.0" encoding="utf-8" ?>
 <entry_list version="1.0">
 </entry_list>
     `;
-    var actual = parseXml(xml);
+    var actual = parseXml(word, xml);
+
+    expect(actual.word).toEqual(word);
 
     expect(actual.isEmpty).toBeTruthy();
     expect(actual.hasSuggestions).toBeFalsy();
@@ -22,6 +25,7 @@ describe('parseXml', () => {
   });
 
   it('parses an entry_list with suggestions', () => {
+    var word = 'lks';
     var xml = `
 <?xml version="1.0" encoding="utf-8" ?>
 <entry_list version="1.0">
@@ -71,7 +75,9 @@ describe('parseXml', () => {
       'Wolds'
     ];
 
-    var actual = parseXml(xml);
+    var actual = parseXml(word, xml);
+
+    expect(actual.word).toEqual(word);
 
     expect(actual.isEmpty).toBeFalsy();
     expect(actual.hasSuggestions).toBeTruthy();
@@ -82,6 +88,7 @@ describe('parseXml', () => {
   });
 
   it('parses an entry_list with one entry', () => {
+    var word = 'hypocrite';
     var xml = `
 <?xml version="1.0" encoding="UTF-8"?>
 <entry_list version="1.0">
@@ -135,7 +142,9 @@ describe('parseXml', () => {
       ]
     };
 
-    var actual = parseXml(xml);
+    var actual = parseXml(word, xml);
+
+    expect(actual.word).toEqual(word);
 
     expect(actual.isEmpty).toBeFalsy();
     expect(actual.hasSuggestions).toBeFalsy();
@@ -146,8 +155,8 @@ describe('parseXml', () => {
   });
 
   it('parses an entry_list with multiple entries', () => {
+    var word = 'atom';
     var xml = `
-
 <?xml version="1.0" encoding="UTF-8"?>
 <entry_list version="1.0">
    <entry id="atom">
@@ -257,7 +266,9 @@ describe('parseXml', () => {
       ]
     };
 
-    var actual = parseXml(xml);
+    var actual = parseXml(word, xml);
+
+    expect(actual.word).toEqual(word);
 
     expect(actual.isEmpty).toBeFalsy();
     expect(actual.hasSuggestions).toBeFalsy();
