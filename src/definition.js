@@ -1,31 +1,9 @@
 const builder = require('botbuilder');
 const http = require('http');
-const DOMParser = require('xmldom').DOMParser;
+
+const DictionaryEntry = require('./dictionary_entry');
 
 const BULLET = '\u2022';
-const MW_SOUND_BASE = 'http://media.merriam-webster.com/soundc11';
-
-/*
-entry_list
-{
-  word: ''
-  isEmpty: true,
-  hasSuggestions: false,
-  hasEntry: false,
-  suggestions: [],
-  entry: {}
-}
-
-entry
-{
-  id: '',
-  hw: '',
-  sound: '',
-  pr: '',
-  fl: '',
-  definitions: []
-}
-*/
 
 function decorate(session, result) {
   var title = result.word;
@@ -65,79 +43,6 @@ function decorate(session, result) {
   return new builder.Message(session).addAttachment(card);
 }
 
-function textFromEntry(name, entry) {
-  var result;
-  var elements = entry.getElementsByTagName(name);
-
-  if (elements.length > 0) {
-    result = elements.item(0).textContent;
-  }
-
-  return result;
-}
-
-function soundToLink(entry) {
-  // http://media.merriam-webster.com/soundc11/h/heart001.wav
-  var file = textFromEntry('wav', entry);
-  if (file) {
-    file = `${MW_SOUND_BASE}/${file.charAt(0)}/${file}`; 
-  }
-
-  return file;
-}
-
-function parseXml(word, xml) {
-  var doc = new DOMParser().parseFromString(xml);
-  var entries = doc.getElementsByTagName('entry');
-  var suggestions = doc.getElementsByTagName('suggestion');
-
-  var result = {
-    word,
-    entry: null,
-    suggestions: []
-  }
-
-  result.hasEntry = entries.length > 0;
-  result.hasSuggestions = suggestions.length;
-  result.isEmpty = !(result.hasEntry || result.hasSuggestions);
-
-  for (var i = 0; i < suggestions.length; i++) {
-    result.suggestions.push(suggestions.item(i).textContent);
-  }
-
-  if (entries.length > 0) {
-    var entry = entries[0];
-    result.entry = {
-      id: entry.getAttribute('id'),
-      hw: textFromEntry('hw', entry).replace(/\*/g, BULLET),
-      pr: textFromEntry('pr', entry),
-      fl: textFromEntry('fl', entry),
-      sound: soundToLink(entry),
-      definitions: []
-    };
-
-    var definitions = entry.getElementsByTagName('def');
-
-    if (definitions.length > 0) {
-      var definition = definitions.item(0);
-      result.entry.date = textFromEntry('date', definition);
-
-      var dts = definition.getElementsByTagName('dt');
-      for (i = 0; i < dts.length; i++) {
-        var dt = dts.item(i);
-        result.entry.definitions.push(
-          dt.textContent
-            .replace(/\s+/g, ' ')
-            .trim()
-            .replace(/^:/, '')
-        );
-      }
-    }
-  }
-
-  return result;
-}
-
 function getDefinition(word) {
 
   var options = {
@@ -161,7 +66,7 @@ function getDefinition(word) {
       response.on('end', () => {
         if (response.statusCode === 200) {
           try {
-            resolve(parseXml(word, data));
+            resolve(new DictionaryEntry(word, data));
           } catch (err) {
             reject(err);
           }
