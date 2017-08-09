@@ -22,7 +22,7 @@ jspm_packages/
 .npm
 
 # Optional eslint cache
-#.eslintrc.js
+.eslintrc.js
 .eslintcache
 
 # Optional REPL history
